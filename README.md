@@ -1,13 +1,32 @@
 
 # The Jester Dataset
 
+# Recommender Systems
+* Youtube
+    * Clustering 
+        * Recommends videos in your preferred languages
+    * Interview on the Algorithm [Here](https://www.youtube.com/watch?v=h2SscdSVzE8)
+* Shopping
+* Amazon
+* Netflix
+* Spotify
+    * Interview with DS at Spotify [Here](https://www.youtube.com/watch?v=_TWgsvF4hBQ)
+* Ads
+
+# Questions
+* are there specific algorithms? what is happening under the hood?
+* What does a train/test split look like?
+    * predict ratings
+    * train on some chunk of rated data
+    * test on another chunk of rated data
+
 ![](https://vignette.wikia.nocookie.net/helmet-heroes/images/9/9b/Jester_Hat.png/revision/latest/scale-to-width-down/340?cb=20131023213944)
 
 Today we will be building a recommendation system using User ratings of jokes.
 
 By the end of this notebook, we will know how to 
 - Format our data for user:user recommendation
-- Find the cosign similarity between two vectors
+- Find the cosine similarity between two vectors
 - Use K Nearest Neighbor to indentify vector similarity
 - Filter a dataframe to identify the highest rated joke based on K most similar users.
 
@@ -40,6 +59,16 @@ Format:
 ```python
 df = pd.read_csv('./data/jesterfinal151cols.csv', header=None)
 df = df.fillna(99)
+```
+
+
+```python
+# Rows in our table -> Individual User's ratings of all 150 jokes
+# Columns in our table -> Individual Jokes
+
+# two sets of vectors
+# user vectors
+# joke vectors
 ```
 
 
@@ -369,6 +398,10 @@ Let's create two vectors and find their cosine distance
 ```python
 v1 = np.array([1, 2])
 v2 = np.array([1, 2.5])
+# (-1, -2) # v1, v2 -> similarity is -1
+# (8, 0.5)
+# (3, 1)
+# v2 = np.array([-3, -6])
 
 distance = cosine_distances(v1.reshape(1, -1), v2.reshape(1, -1))
 distance
@@ -404,15 +437,22 @@ origin = [0], [0]
 
 
 ```python
+from matplotlib.lines import Line2D
+
+custom_lines = [Line2D([0], [0], color='r', lw=2),
+                Line2D([0], [0], color='b', lw=2)]
+
 plt.figure(figsize=(5, 5))
 plt.grid(linestyle='dashed', zorder=0)
 plt.scatter(*origin, s=100, c='k', zorder=2)
 plt.quiver(*origin, V[:,0], V[:,1], color=['r','b'], scale=8, zorder=1)
+plt.legend(custom_lines, [f'v1 {v1}', f'v2 {v2}'])
+plt.title("Similar Vectors")
 plt.show()
 ```
 
 
-![png](jester_recommendation_system_files/jester_recommendation_system_20_0.png)
+![png](jester_recommendation_system_files/jester_recommendation_system_23_0.png)
 
 
 
@@ -453,6 +493,128 @@ cosine_similarity(v1.reshape(1, -1), v2.reshape(1, -1))
 
 
 ```python
+display(df.head(2))
+df.shape
+```
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+      <th>9</th>
+      <th>...</th>
+      <th>141</th>
+      <th>142</th>
+      <th>143</th>
+      <th>144</th>
+      <th>145</th>
+      <th>146</th>
+      <th>147</th>
+      <th>148</th>
+      <th>149</th>
+      <th>150</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>62</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>0.21875</td>
+      <td>99</td>
+      <td>-9.28125</td>
+      <td>-9.28125</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>34</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>-9.68750</td>
+      <td>99</td>
+      <td>9.93750</td>
+      <td>9.53125</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+    </tr>
+  </tbody>
+</table>
+<p>2 rows × 151 columns</p>
+</div>
+
+
+
+
+
+    (50692, 151)
+
+
+
+
+```python
+np.where(df.iloc[0, :]<=10)[0].shape
+```
+
+
+
+
+    (62,)
+
+
+
+
+```python
 # build a flow for a given user then turn this into a function
 
 ## User we would like to recommend a joke to
@@ -465,15 +627,361 @@ userA = df.drop(0, axis=1).loc[user_index, :]
 
 # let's get the other users
 others = df.drop(0, axis=1).drop(index=user_index, axis=0)
+```
+
+    User 21597 is our random user
 
 
+
+```python
+userA
+```
+
+
+
+
+    1      99.0
+    2      99.0
+    3      99.0
+    4      99.0
+    5      99.0
+           ... 
+    146    99.0
+    147    99.0
+    148    99.0
+    149    99.0
+    150    99.0
+    Name: 21597, Length: 150, dtype: float64
+
+
+
+
+```python
+others
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+      <th>9</th>
+      <th>10</th>
+      <th>...</th>
+      <th>141</th>
+      <th>142</th>
+      <th>143</th>
+      <th>144</th>
+      <th>145</th>
+      <th>146</th>
+      <th>147</th>
+      <th>148</th>
+      <th>149</th>
+      <th>150</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>0.21875</td>
+      <td>99</td>
+      <td>-9.28125</td>
+      <td>-9.28125</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>-9.68750</td>
+      <td>99</td>
+      <td>9.93750</td>
+      <td>9.53125</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>-9.84375</td>
+      <td>99</td>
+      <td>-9.84375</td>
+      <td>-7.21875</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>6.90625</td>
+      <td>99</td>
+      <td>4.75000</td>
+      <td>-5.90625</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>-0.03125</td>
+      <td>99</td>
+      <td>-9.09375</td>
+      <td>-0.40625</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <td>50687</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.00000</td>
+      <td>99</td>
+      <td>-5.93750</td>
+      <td>-3.71875</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>-1.15625</td>
+      <td>99.0</td>
+      <td>-1.1875</td>
+    </tr>
+    <tr>
+      <td>50688</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.00000</td>
+      <td>99</td>
+      <td>-5.71875</td>
+      <td>-8.15625</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>3.06250</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>50689</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.00000</td>
+      <td>99</td>
+      <td>0.09375</td>
+      <td>0.09375</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>50690</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.00000</td>
+      <td>99</td>
+      <td>-0.12500</td>
+      <td>-0.12500</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+    <tr>
+      <td>50691</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.00000</td>
+      <td>99</td>
+      <td>-1.75000</td>
+      <td>-0.09375</td>
+      <td>99</td>
+      <td>99</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.0000</td>
+    </tr>
+  </tbody>
+</table>
+<p>50691 rows × 150 columns</p>
+</div>
+
+
+
+
+```python
 # let's find the nearest neighbors
 knn = NearestNeighbors(n_neighbors=5, metric='cosine', n_jobs=-1)
 knn.fit(others)
 ```
-
-    User 22815 is our random user
-
 
 
 
@@ -501,9 +1009,10 @@ print('-------------------------------------------------------------------------
 ```
 
     ---------------------------------------------------------------------------------------------
-    userA's K nearest neighbors: [0.00016893 0.00043711 0.00057741 0.00075709 0.00148437]
+    userA's K nearest neighbors: [4.93060678e-05 6.27067151e-05 8.14612696e-05 8.36617885e-05
+     8.48456414e-05]
     ---------------------------------------------------------------------------------------------
-    Index for nearest neighbors: [28048 21550 29166 21698  3596]
+    Index for nearest neighbors: [22785 34779 34921 21757 17348]
     ---------------------------------------------------------------------------------------------
 
 
@@ -522,14 +1031,16 @@ jokes_not_rated
 
 
     array([  0,   1,   2,   3,   4,   5,   8,   9,  10,  11,  13,  19,  20,
-            21,  22,  23,  26,  28,  29,  30,  32,  34,  35,  36,  37,  38,
-            40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  52,
-            53,  56,  57,  58,  59,  60,  61,  63,  65,  66,  67,  69,  70,
-            72,  73,  74,  77,  78,  79,  80,  81,  83,  84,  85,  87,  88,
-            89,  91,  92,  93,  94,  95,  96,  97,  98,  99, 100, 101, 102,
-           103, 105, 106, 108, 109, 110, 112, 114, 115, 119, 121, 122, 123,
-           124, 125, 126, 128, 129, 130, 132, 133, 135, 136, 137, 138, 139,
-           140, 141, 148])
+            21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,
+            34,  36,  37,  38,  39,  40,  41,  42,  43,  44,  45,  47,  48,
+            49,  50,  51,  52,  53,  54,  56,  57,  58,  59,  60,  62,  63,
+            64,  65,  66,  67,  69,  70,  71,  72,  73,  74,  75,  76,  77,
+            78,  79,  80,  81,  82,  83,  84,  85,  86,  87,  88,  89,  90,
+            91,  92,  93,  94,  95,  97,  98,  99, 100, 101, 102, 103, 104,
+           105, 106, 107, 108, 109, 110, 111, 112, 114, 115, 116, 117, 118,
+           119, 120, 121, 122, 123, 124, 125, 127, 128, 129, 130, 132, 133,
+           134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146,
+           147, 148, 149])
 
 
 
@@ -537,7 +1048,7 @@ Next we need to isolate the nearest neighbors in our data, and examine their rat
 
 
 ```python
-user_jokes = df.drop(0, axis=1).loc[indices, jokes_not_rated]
+user_jokes = df.loc[indices, jokes_not_rated].drop(0, axis=1)
 user_jokes
 ```
 
@@ -562,7 +1073,6 @@ user_jokes
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>0</th>
       <th>1</th>
       <th>2</th>
       <th>3</th>
@@ -572,143 +1082,144 @@ user_jokes
       <th>9</th>
       <th>10</th>
       <th>11</th>
+      <th>13</th>
       <th>...</th>
-      <th>132</th>
-      <th>133</th>
-      <th>135</th>
-      <th>136</th>
-      <th>137</th>
-      <th>138</th>
-      <th>139</th>
       <th>140</th>
       <th>141</th>
+      <th>142</th>
+      <th>143</th>
+      <th>144</th>
+      <th>145</th>
+      <th>146</th>
+      <th>147</th>
       <th>148</th>
+      <th>149</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>28048</td>
-      <td>NaN</td>
+      <td>22785</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
+      <td>99.0</td>
+      <td>-8.40625</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>-7.65625</td>
+      <td>...</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>2.3125</td>
+      <td>99.00000</td>
+      <td>2.875</td>
+      <td>99.0</td>
       <td>99.0</td>
       <td>1.40625</td>
-      <td>99</td>
-      <td>99</td>
-      <td>99</td>
-      <td>...</td>
-      <td>99.00000</td>
-      <td>99.0</td>
-      <td>99.00000</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.00000</td>
+      <td>4.125</td>
     </tr>
     <tr>
-      <td>21550</td>
-      <td>NaN</td>
+      <td>34779</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99.0</td>
-      <td>4.56250</td>
+      <td>-5.81250</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
+      <td>2.18750</td>
       <td>...</td>
-      <td>9.65625</td>
-      <td>99.0</td>
-      <td>9.09375</td>
       <td>99.0</td>
       <td>99.0</td>
       <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>9.56250</td>
-    </tr>
-    <tr>
-      <td>29166</td>
-      <td>NaN</td>
-      <td>99</td>
-      <td>99</td>
-      <td>99</td>
-      <td>99</td>
-      <td>99.0</td>
-      <td>-6.06250</td>
-      <td>99</td>
-      <td>99</td>
-      <td>99</td>
-      <td>...</td>
-      <td>99.00000</td>
-      <td>99.0</td>
-      <td>99.00000</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
-      <td>99.0</td>
+      <td>99.0000</td>
+      <td>-1.65625</td>
+      <td>99.000</td>
       <td>99.0</td>
       <td>99.0</td>
       <td>99.00000</td>
+      <td>99.000</td>
     </tr>
     <tr>
-      <td>21698</td>
-      <td>NaN</td>
+      <td>34921</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99.0</td>
-      <td>-5.03125</td>
+      <td>-3.53125</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
+      <td>-5.65625</td>
       <td>...</td>
-      <td>8.71875</td>
-      <td>99.0</td>
-      <td>4.28125</td>
       <td>99.0</td>
       <td>99.0</td>
       <td>99.0</td>
+      <td>99.0000</td>
+      <td>-4.21875</td>
+      <td>-3.250</td>
       <td>99.0</td>
       <td>99.0</td>
-      <td>99.0</td>
-      <td>-5.15625</td>
+      <td>99.00000</td>
+      <td>99.000</td>
     </tr>
     <tr>
-      <td>3596</td>
-      <td>NaN</td>
+      <td>21757</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
       <td>99.0</td>
-      <td>3.18750</td>
+      <td>-4.12500</td>
       <td>99</td>
       <td>99</td>
       <td>99</td>
+      <td>1.62500</td>
       <td>...</td>
-      <td>9.50000</td>
-      <td>99.0</td>
-      <td>-9.87500</td>
       <td>99.0</td>
       <td>99.0</td>
       <td>99.0</td>
+      <td>99.0000</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+    </tr>
+    <tr>
+      <td>17348</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99.0</td>
+      <td>0.68750</td>
+      <td>99</td>
+      <td>99</td>
+      <td>99</td>
+      <td>1.43750</td>
+      <td>...</td>
       <td>99.0</td>
       <td>99.0</td>
       <td>99.0</td>
-      <td>9.84375</td>
+      <td>99.0000</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
     </tr>
   </tbody>
 </table>
-<p>5 rows × 107 columns</p>
+<p>5 rows × 132 columns</p>
 </div>
 
 
@@ -754,22 +1265,14 @@ user_jokes.head()
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>28048</th>
-      <th>21550</th>
-      <th>29166</th>
-      <th>21698</th>
-      <th>3596</th>
+      <th>22785</th>
+      <th>34779</th>
+      <th>34921</th>
+      <th>21757</th>
+      <th>17348</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>0</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-      <td>NaN</td>
-    </tr>
     <tr>
       <td>1</td>
       <td>99.0</td>
@@ -802,6 +1305,14 @@ user_jokes.head()
       <td>99.0</td>
       <td>99.0</td>
     </tr>
+    <tr>
+      <td>5</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+    </tr>
   </tbody>
 </table>
 </div>
@@ -814,6 +1325,313 @@ Great! Now we add the joke ratings as a column to our user_jokes dataframe
 ```python
 user_jokes['total'] = ratings
 ```
+
+
+```python
+user_jokes.head()
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>22785</th>
+      <th>34779</th>
+      <th>34921</th>
+      <th>21757</th>
+      <th>17348</th>
+      <th>total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>99.0</td>
+      <td>0.0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+user_jokes.iloc[50:70]
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>22785</th>
+      <th>34779</th>
+      <th>34921</th>
+      <th>21757</th>
+      <th>17348</th>
+      <th>total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>63</td>
+      <td>6.46875</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>6.46875</td>
+    </tr>
+    <tr>
+      <td>64</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>65</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>66</td>
+      <td>3.59375</td>
+      <td>99.0</td>
+      <td>7.68750</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>11.28125</td>
+    </tr>
+    <tr>
+      <td>67</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>69</td>
+      <td>2.12500</td>
+      <td>99.0</td>
+      <td>4.09375</td>
+      <td>6.875</td>
+      <td>7.21875</td>
+      <td>20.31250</td>
+    </tr>
+    <tr>
+      <td>70</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>71</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>72</td>
+      <td>6.09375</td>
+      <td>99.0</td>
+      <td>4.53125</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>10.62500</td>
+    </tr>
+    <tr>
+      <td>73</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>74</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>75</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>76</td>
+      <td>2.78125</td>
+      <td>99.0</td>
+      <td>6.65625</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>9.43750</td>
+    </tr>
+    <tr>
+      <td>77</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>-3.09375</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>-3.09375</td>
+    </tr>
+    <tr>
+      <td>78</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>3.750</td>
+      <td>99.00000</td>
+      <td>3.75000</td>
+    </tr>
+    <tr>
+      <td>79</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>80</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>81</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>1.12500</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>1.12500</td>
+    </tr>
+    <tr>
+      <td>82</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>99.00000</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>0.00000</td>
+    </tr>
+    <tr>
+      <td>83</td>
+      <td>99.00000</td>
+      <td>99.0</td>
+      <td>-2.62500</td>
+      <td>99.000</td>
+      <td>99.00000</td>
+      <td>-2.62500</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 Using the method .idxmax(), we return the index for the joke with the highest rating!
 
@@ -857,59 +1675,59 @@ user_jokes.sort_values(by='total', ascending=False).head()
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>28048</th>
-      <th>21550</th>
-      <th>29166</th>
-      <th>21698</th>
-      <th>3596</th>
+      <th>22785</th>
+      <th>34779</th>
+      <th>34921</th>
+      <th>21757</th>
+      <th>17348</th>
       <th>total</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>69</td>
-      <td>3.34375</td>
-      <td>8.25000</td>
+      <td>2.12500</td>
       <td>99.0000</td>
-      <td>8.53125</td>
-      <td>9.96875</td>
-      <td>30.09375</td>
-    </tr>
-    <tr>
-      <td>56</td>
-      <td>3.25000</td>
-      <td>9.81250</td>
-      <td>99.0000</td>
-      <td>6.90625</td>
-      <td>9.84375</td>
-      <td>29.81250</td>
-    </tr>
-    <tr>
-      <td>132</td>
-      <td>99.00000</td>
-      <td>9.65625</td>
-      <td>99.0000</td>
-      <td>8.71875</td>
-      <td>9.50000</td>
-      <td>27.87500</td>
-    </tr>
-    <tr>
-      <td>34</td>
-      <td>99.00000</td>
-      <td>8.93750</td>
-      <td>99.0000</td>
-      <td>7.71875</td>
-      <td>9.93750</td>
-      <td>26.59375</td>
+      <td>4.09375</td>
+      <td>6.87500</td>
+      <td>7.21875</td>
+      <td>20.31250</td>
     </tr>
     <tr>
       <td>114</td>
-      <td>5.40625</td>
-      <td>9.25000</td>
-      <td>-3.0625</td>
-      <td>4.62500</td>
-      <td>9.87500</td>
-      <td>26.09375</td>
+      <td>5.93750</td>
+      <td>6.4375</td>
+      <td>-0.25000</td>
+      <td>5.78125</td>
+      <td>1.50000</td>
+      <td>19.40625</td>
+    </tr>
+    <tr>
+      <td>49</td>
+      <td>99.00000</td>
+      <td>99.0000</td>
+      <td>8.59375</td>
+      <td>8.84375</td>
+      <td>99.00000</td>
+      <td>17.43750</td>
+    </tr>
+    <tr>
+      <td>36</td>
+      <td>5.34375</td>
+      <td>2.6250</td>
+      <td>3.56250</td>
+      <td>99.00000</td>
+      <td>5.59375</td>
+      <td>17.12500</td>
+    </tr>
+    <tr>
+      <td>127</td>
+      <td>8.93750</td>
+      <td>99.0000</td>
+      <td>99.00000</td>
+      <td>0.87500</td>
+      <td>5.12500</td>
+      <td>14.93750</td>
     </tr>
   </tbody>
 </table>
@@ -928,6 +1746,18 @@ jokes.iloc[recommend_index][1]
 
 
     'Employer to applicant: "In this job we need someone who is responsible." Applicant: "I\'m the one you want. On my last job, every time anything went wrong, they said I was responsible."'
+
+
+
+
+```python
+jokes.iloc[36][1]
+```
+
+
+
+
+    'A Jewish young man was seeing a psychiatrist for an eating and sleeping disorder. "I am so obsessed with my mother...As soon as I go to sleep, I start dreaming, and everyone in my dream turns into my mother. I wake up in such a state, and all I can do is go downstairs and eat a piece of toast." The psychiatrist replies, "What, just one piece of toast, for a big boy like you?"'
 
 
 
